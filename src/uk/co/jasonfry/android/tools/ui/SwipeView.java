@@ -44,6 +44,7 @@ public class SwipeView extends HorizontalScrollView
 	private int distanceX;
 	private int previousDirection;
 	private int mCurrentPage;
+	private int mPageWidth = 0;
 	private boolean firstMotionEvent = true;
 	private OnPageChangedListener mOnPageChangedListener = null;
 	private SwipeOnTouchListener mSwipeOnTouchListener;
@@ -87,12 +88,21 @@ public class SwipeView extends HorizontalScrollView
 		
 		Display display = ((WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay(); 
 		SCREEN_WIDTH = (int) (display.getWidth());
+		// Default page width to whole screen width
+		mPageWidth = SCREEN_WIDTH;
 		mCurrentPage = 0;
 		
 		mSwipeOnTouchListener = new SwipeOnTouchListener();
 		setOnTouchListener(mSwipeOnTouchListener);
-		
-		
+	}
+	
+	// returns the X offset to be added to the LEFT margin of the first child and RIGHT margin of the last child
+	public int calculatePageSize(MarginLayoutParams childLayoutParams) {
+		// Screen Width - Child Width (including margins)
+		this.mPageWidth = childLayoutParams.leftMargin + childLayoutParams.width + childLayoutParams.rightMargin;
+		int gapTotalX = SCREEN_WIDTH - mPageWidth;
+		int offsetX = (int) (gapTotalX / 2);
+		return offsetX;
 	}
 	
 	@Override
@@ -190,7 +200,7 @@ public class SwipeView extends HorizontalScrollView
 	 */
 	public void scrollToPage(int page)
 	{
-		scrollTo(page*getMeasuredWidth(),0);
+		scrollTo(page*mPageWidth,0);
 		if(mOnPageChangedListener!=null)
 		{
 			mOnPageChangedListener.onPageChanged(mCurrentPage, page);
@@ -209,7 +219,7 @@ public class SwipeView extends HorizontalScrollView
 	 */
 	public void smoothScrollToPage(int page)
 	{
-		smoothScrollTo(page*getMeasuredWidth(),0);
+		smoothScrollTo(page*mPageWidth,0);
 		if(mOnPageChangedListener!=null)
 		{
 			mOnPageChangedListener.onPageChanged(mCurrentPage, page);
@@ -338,9 +348,8 @@ public class SwipeView extends HorizontalScrollView
 					
 				case MotionEvent.ACTION_UP :
 					float fingerUpPosition = getScrollX();
-	                float numberOfPages = mLinearLayout.getChildCount();
-	                float pageWidth = getMeasuredWidth();
-	                float fingerUpPage = fingerUpPosition/pageWidth;
+	                float numberOfPages = mLinearLayout.getMeasuredWidth() / mPageWidth;
+	                float fingerUpPage = fingerUpPosition/mPageWidth;
 	                float edgePosition = 0;
 	                
 	                if(previousDirection == 1) //forwards
@@ -349,11 +358,11 @@ public class SwipeView extends HorizontalScrollView
 		                {
 		                	if(mCurrentPage<(numberOfPages-1))//if not at the end of the pages, you don't want to try and advance into nothing!
 		                	{
-		                		edgePosition = (int)(fingerUpPage+1)*pageWidth;
+		                		edgePosition = (int)(fingerUpPage+1)*mPageWidth;
 		                	}
 		                	else
 		                	{
-		                		edgePosition = (int)(fingerUpPage)*pageWidth;
+		                		edgePosition = (int)(fingerUpPage)*mPageWidth;
 		                	}
 		                }
 		                else //return to start position
@@ -363,11 +372,11 @@ public class SwipeView extends HorizontalScrollView
 		                		//need to correct for when user starts to scroll into 
 		                		//nothing then pulls it back a bit, this becomes a 
 		                		//kind of forwards scroll instead
-		                		edgePosition = (int)(fingerUpPage+1)*pageWidth;
+		                		edgePosition = (int)(fingerUpPage+1)*mPageWidth;
 		                	}
 		                	else //carry on as normal
 		                	{
-		                		edgePosition = (int)(fingerUpPage)*pageWidth;
+		                		edgePosition = (int)(fingerUpPage)*mPageWidth;
 		                	}
 		                }
 	                	
@@ -379,7 +388,7 @@ public class SwipeView extends HorizontalScrollView
 	                {
 	                	if(distanceX < -DEFAULT_SWIPE_THRESHOLD)//go backwards
 		                {
-		                	edgePosition = (int)(fingerUpPage)*pageWidth;
+		                	edgePosition = (int)(fingerUpPage)*mPageWidth;
 		                }
 		                else //return to start position
 		                {
@@ -388,11 +397,11 @@ public class SwipeView extends HorizontalScrollView
 		                		//need to correct for when user starts to scroll into 
 		                		//nothing then pulls it back a bit, this becomes a 
 		                		//kind of backwards scroll instead
-		                		edgePosition = (int)(fingerUpPage)*pageWidth;
+		                		edgePosition = (int)(fingerUpPage)*mPageWidth;
 		                	}
 		                	else //carry on as normal
 		                	{
-		                		edgePosition = (int)(fingerUpPage+1)*pageWidth;
+		                		edgePosition = (int)(fingerUpPage+1)*mPageWidth;
 		                	}
 		                	
 		                }
@@ -403,24 +412,23 @@ public class SwipeView extends HorizontalScrollView
 	                smoothScrollTo((int)edgePosition, 0);
 	                firstMotionEvent = true;
 	                
-	                
 	                //fire OnPageChangedListener, talk to page control
-	                if(mCurrentPage!=(int)(edgePosition/pageWidth) && (int)(edgePosition/pageWidth)<getPageCount()) //if the page at the beginning of this action is not equal to page we are now on, i.e. if the page has changed
+	                if(mCurrentPage!=(int)(edgePosition/mPageWidth) && (int)(edgePosition/mPageWidth)<getPageCount()) //if the page at the beginning of this action is not equal to page we are now on, i.e. if the page has changed
 	                {
 	                	//page control
 	                	if(mPageControl!=null)
 	                	{
-	                		mPageControl.setCurrentPage((int)(edgePosition/pageWidth));
+	                		mPageControl.setCurrentPage((int)(edgePosition/mPageWidth));
 	                	}
 	               
 	                	//page changed listener 
 	                	if(mOnPageChangedListener!=null)
 	                	{
-	                		mOnPageChangedListener.onPageChanged(mCurrentPage, (int)(edgePosition/pageWidth));
+	                		mOnPageChangedListener.onPageChanged(mCurrentPage, (int)(edgePosition/mPageWidth));
 	                	}
 	                }
 	                
-	                mCurrentPage = (int)(edgePosition/pageWidth);
+	                mCurrentPage = (int)(edgePosition/mPageWidth);
 	                return true;
 			}
 			
