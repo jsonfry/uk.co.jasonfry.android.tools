@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Jason Fry
+ * Copyright (C) 2011 Jason Fry
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 /**
  * @author Jason Fry - jasonfry.co.uk
- * @version 1.0
+ * @version 1.1
  * 
  */
 
@@ -37,21 +37,26 @@ import android.widget.LinearLayout;
 
 public class SwipeView extends HorizontalScrollView
 {
+	private static int DEFAULT_SWIPE_THRESHOLD = 60;
+	
 	private LinearLayout mLinearLayout;
 	private Context mContext;
 	private int SCREEN_WIDTH;
-	private int motionStartX;
-	private int distanceX;
-	private int previousDirection;
-	private int mCurrentPage;
-	private boolean firstMotionEvent = true;
+	private int mMotionStartX;
+	private int mMotionStartY;
+	private boolean mMostlyScrollingInX = false;
+	private boolean mMostlyScrollingInY = false;
+	private boolean mJustInterceptedAndIgnored = false;
+	private boolean mSendingDummyMotionEvent = false;
+	private int mDistanceX;
+	private int mPreviousDirection;
+	private int mCurrentPage = 0;
+	private int mPageWidth = 0;
+	private boolean mFirstMotionEvent = true;
 	private OnPageChangedListener mOnPageChangedListener = null;
 	private SwipeOnTouchListener mSwipeOnTouchListener;
-	
+	private View.OnTouchListener mOnTouchListener;
 	private PageControl mPageControl = null;
-	
-	private static int DEFAULT_SWIPE_THRESHOLD = 70;
-	
 
 	public SwipeView(Context context) 
 	{
@@ -87,12 +92,11 @@ public class SwipeView extends HorizontalScrollView
 		
 		Display display = ((WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay(); 
 		SCREEN_WIDTH = (int) (display.getWidth());
+		mPageWidth = SCREEN_WIDTH;
 		mCurrentPage = 0;
 		
 		mSwipeOnTouchListener = new SwipeOnTouchListener();
-		setOnTouchListener(mSwipeOnTouchListener);
-		
-		
+		super.setOnTouchListener(mSwipeOnTouchListener);
 	}
 	
 	@Override
@@ -104,21 +108,30 @@ public class SwipeView extends HorizontalScrollView
 	@Override
 	public void addView(View child)
 	{
-		addView(child,-1);
+		this.addView(child,-1);
 	}
 	
 	@Override
 	public void addView (View child, int index)
 	{
 		ViewGroup.LayoutParams params;
-		params = new LayoutParams(SCREEN_WIDTH, LayoutParams.FILL_PARENT);
-		addView(child, index, params);
+		if(child.getLayoutParams()==null)
+		{
+			params = new LayoutParams(mPageWidth, LayoutParams.FILL_PARENT);
+		}
+		else
+		{
+			params = child.getLayoutParams();
+			params.width = mPageWidth;
+		}
+		this.addView(child, index, params);
 	}
 	
 	@Override
 	public void addView (View child, ViewGroup.LayoutParams params)
 	{
-		addView (child, -1, new LayoutParams(SCREEN_WIDTH, params.height));
+		params.width = mPageWidth;
+		this.addView (child, -1, params);
 	}
 	
 	@Override
@@ -127,6 +140,23 @@ public class SwipeView extends HorizontalScrollView
 		requestLayout();
 		invalidate();
 		mLinearLayout.addView(child, index, params);
+	}
+	
+	@Override
+	protected void onLayout(boolean changed, int l, int t, int r, int b)
+	{
+		super.onLayout(changed, l, t, r, b);
+		
+		if(changed)
+		{
+			scrollToPage(mCurrentPage);
+		}
+	}
+		
+	@Override
+	public void setOnTouchListener(View.OnTouchListener onTouchListener)
+	{
+		mOnTouchListener = onTouchListener;
 	}
 	
 	/**
@@ -140,8 +170,6 @@ public class SwipeView extends HorizontalScrollView
 	{
 		return mLinearLayout;
 	}
-	
-	
 	
 	/**
 	 * Get the swiping threshold distance to make the screens change
@@ -190,16 +218,7 @@ public class SwipeView extends HorizontalScrollView
 	 */
 	public void scrollToPage(int page)
 	{
-		scrollTo(page*getMeasuredWidth(),0);
-		if(mOnPageChangedListener!=null)
-		{
-			mOnPageChangedListener.onPageChanged(mCurrentPage, page);
-		}
-		if(mPageControl!=null)
-		{
-			mPageControl.setCurrentPage(page);
-		}
-		mCurrentPage = page;
+		scrollToPage(page,false);
 	}
 	
 	/**
@@ -209,16 +228,77 @@ public class SwipeView extends HorizontalScrollView
 	 */
 	public void smoothScrollToPage(int page)
 	{
-		smoothScrollTo(page*getMeasuredWidth(),0);
-		if(mOnPageChangedListener!=null)
+		scrollToPage(page,true);
+	}
+	
+	private void scrollToPage(int page, boolean smooth)
+	{
+		int oldPage = mCurrentPage;
+		if(page>=getPageCount() && getPageCount()>0)
+        {
+        	page--;
+        }
+		else if(page<0)
 		{
-			mOnPageChangedListener.onPageChanged(mCurrentPage, page);
+			page=0;
 		}
-		if(mPageControl!=null)
+		
+		if(smooth)
+		{
+			smoothScrollTo(page*mPageWidth,0);
+		}
+		else
+		{
+			scrollTo(page*mPageWidth,0);
+		}
+		mCurrentPage = page;
+		
+		if(mOnPageChangedListener!=null && oldPage!=page)
+		{
+			mOnPageChangedListener.onPageChanged(oldPage, page);
+		}
+		if(mPageControl!=null && oldPage!=page)
 		{
 			mPageControl.setCurrentPage(page);
 		}
-		mCurrentPage = page;
+	}
+	
+	/**
+	 * Set the width of each page. This function returns an integer that should be added to the left margin of 
+	 * the first child and the right margin of the last child. This enables all the children to appear to be 
+	 * central
+	 * 
+	 * @param pageWidth The width you wish to assign for each page
+	 * @return An integer to add to the left margin of the first child and the right margin of the last child
+	 */
+	public int setPageWidth(int pageWidth)
+	{
+		mPageWidth = pageWidth;
+		return (SCREEN_WIDTH - mPageWidth)/2;
+	}
+	
+	/**
+	 * Set the width of each page by using the layout parameters of a child. Call this function before you add
+	 * the child to the SwipeView to maintain the child's size. This function returns an integer that should 
+	 * be added to the left margin of the first child and the right margin of the last child. This enables all
+	 * the children to appear to be central
+	 * 
+	 * @param childLayoutParams A child view that you have added / will add to the SwipeView
+	 * @return An integer to add to the left margin of the first child and the right margin of the last child
+	 */
+	public int calculatePageSize(MarginLayoutParams childLayoutParams) 
+	{
+		return setPageWidth(childLayoutParams.leftMargin + childLayoutParams.width + childLayoutParams.rightMargin);
+	}
+	
+	/**
+	 * Return the current width of each page
+	 * 
+	 * @return Returns t¤he width of each page
+	 */
+	public int getPageWidth()
+	{
+		return mPageWidth;
 	}
 	
 	/**
@@ -234,17 +314,14 @@ public class SwipeView extends HorizontalScrollView
 		pageControl.setCurrentPage(mCurrentPage);
 		pageControl.setOnPageControlClickListener(new OnPageControlClickListener() 
 		{
-			
 			public void goForwards() 
 			{
 				smoothScrollToPage(mCurrentPage+1);
-				
 			}
 			
 			public void goBackwards() 
 			{
 				smoothScrollToPage(mCurrentPage-1);
-				
 			}
 		});
 	}
@@ -296,64 +373,139 @@ public class SwipeView extends HorizontalScrollView
 		return mOnPageChangedListener;
 	}
 	
+	@Override
+	public boolean onInterceptTouchEvent(MotionEvent ev)
+	{
+		boolean result = super.onInterceptTouchEvent(ev);
+		
+		if(ev.getAction() == MotionEvent.ACTION_DOWN)
+		{
+			mMotionStartX = (int) ev.getX();
+			mMotionStartY = (int) ev.getY();
+		}
+		else if(ev.getAction() == MotionEvent.ACTION_UP)
+		{
+			mMostlyScrollingInX = false;
+			mMostlyScrollingInY = false;
+			
+		}
+		else if(ev.getAction()==MotionEvent.ACTION_MOVE)
+		{
+			detectMostlyScrollingDirection(ev);
+		}
+		
+		if(mMostlyScrollingInY)
+		{
+			mMostlyScrollingInY = false; //reset mostlyScrollingInY as we are about to say we no longer wish to receive anymore touch events, and thus won't be able to reset it anywhere else
+			return false;
+		}
+		if(mMostlyScrollingInX)
+		{
+			mJustInterceptedAndIgnored = true;
+			return true;
+		}
+		
+		return result;
+	}
+	
+	private void detectMostlyScrollingDirection(MotionEvent ev)
+	{
+		if(!mMostlyScrollingInX && !mMostlyScrollingInY) //if we dont know which direction we're going yet
+		{
+			float xDistance = Math.abs(mMotionStartX - ev.getX());
+			float yDistance = Math.abs(mMotionStartY - ev.getY());
+			
+			if(yDistance>xDistance+5)
+			{
+				mMostlyScrollingInY = true;
+			}
+			else if(xDistance>yDistance+5)
+			{
+				mMostlyScrollingInX = true;
+			}
+		}
+	}
+	
 	private class SwipeOnTouchListener implements View.OnTouchListener
 	{
 
 		public boolean onTouch(View v, MotionEvent event) 
 		{
+			if(mOnTouchListener!=null && !mJustInterceptedAndIgnored || mOnTouchListener!=null && mSendingDummyMotionEvent) //send on touch event to onTouchListener set by an application implementing a SwipeView and setting their own onTouchListener
+			{
+				if(mOnTouchListener.onTouch(v, event))
+				{
+					return true;
+				}
+			}
+			
+			if(mSendingDummyMotionEvent)//if sending the fake action down event (to do with vertical scrolling within this horizontalscrollview) then just ignore it
+			{
+				mSendingDummyMotionEvent = false;
+				return false;
+			}
+
 			switch(event.getAction())
 			{
 				case MotionEvent.ACTION_DOWN :
-					motionStartX = (int) event.getX();
-					firstMotionEvent = false;
+					mMotionStartX = (int) event.getX();
+					mMotionStartY = (int) event.getY();
+					mFirstMotionEvent = false;
 					return false;
 					
 				case MotionEvent.ACTION_MOVE :
-					
-					int newDistance = motionStartX - (int) event.getX();
+					int newDistance = mMotionStartX - (int) event.getX();
 					int newDirection;
 					
 					if(newDistance<0) //backwards
 					{
-						newDirection =  (distanceX+4 <= newDistance) ? 1 : -1;  //the distance +4 is to allow for jitter
+						newDirection =  (mDistanceX+4 <= newDistance) ? 1 : -1;  //the distance +4 is to allow for jitter
 					}
 					else //forwards
 					{
-						newDirection =  (distanceX-4 <= newDistance) ? 1 : -1;  //the distance -4 is to allow for jitter
+						newDirection =  (mDistanceX-4 <= newDistance) ? 1 : -1;  //the distance -4 is to allow for jitter
 					}
 					
 					
-					if(newDirection != previousDirection && !firstMotionEvent)//changed direction, so reset start point
+					if(newDirection != mPreviousDirection && !mFirstMotionEvent)//changed direction, so reset start point
 					{
-						motionStartX = (int) event.getX();
-						distanceX = motionStartX - (int) event.getX();
+						mMotionStartX = (int) event.getX();
+						mDistanceX = mMotionStartX - (int) event.getX();
 					}
 					else
 					{
-						distanceX = newDistance;
+						mDistanceX = newDistance;
 					}
 
-					previousDirection = newDirection; //backwards -1, forwards is 1
+					mPreviousDirection = newDirection; //backwards -1, forwards is 1,
+					
+					if(mJustInterceptedAndIgnored)//if the intercept picked it up first, we need to give the horizontalscrollview ontouch an action down to enable it to scroll and follow your finger
+					{
+						mSendingDummyMotionEvent = true;
+						dispatchTouchEvent(MotionEvent.obtain(event.getDownTime(), event.getEventTime(), MotionEvent.ACTION_DOWN, event.getPointerCount(), mMotionStartX, mMotionStartY, event.getPressure(), event.getSize(), event.getMetaState(), event.getXPrecision(), event.getYPrecision(), event.getDeviceId(), event.getEdgeFlags()));
+						mJustInterceptedAndIgnored = false;
+						
+						return true;
+					}
 					return false;
 					
 				case MotionEvent.ACTION_UP :
 					float fingerUpPosition = getScrollX();
-	                float numberOfPages = mLinearLayout.getChildCount();
-	                float pageWidth = getMeasuredWidth();
-	                float fingerUpPage = fingerUpPosition/pageWidth;
+	                float numberOfPages = mLinearLayout.getMeasuredWidth() / mPageWidth;
+	                float fingerUpPage = fingerUpPosition/mPageWidth;
 	                float edgePosition = 0;
 	                
-	                if(previousDirection == 1) //forwards
+	                if(mPreviousDirection == 1) //forwards
 	                {
-	                	if(distanceX > DEFAULT_SWIPE_THRESHOLD)//if over then go forwards
+	                	if(mDistanceX > DEFAULT_SWIPE_THRESHOLD)//if over then go forwards
 		                {
-		                	if(mCurrentPage<(numberOfPages-1))//if not at the end of the pages, you don't want to try and advance into nothing!
+	                		if(mCurrentPage<(numberOfPages-1))//if not at the end of the pages, you don't want to try and advance into nothing!
 		                	{
-		                		edgePosition = (int)(fingerUpPage+1)*pageWidth;
+		                		edgePosition = (int)(fingerUpPage+1)*mPageWidth;
 		                	}
 		                	else
 		                	{
-		                		edgePosition = (int)(fingerUpPage)*pageWidth;
+		                		edgePosition = (int)(fingerUpPage)*mPageWidth;
 		                	}
 		                }
 		                else //return to start position
@@ -363,23 +515,20 @@ public class SwipeView extends HorizontalScrollView
 		                		//need to correct for when user starts to scroll into 
 		                		//nothing then pulls it back a bit, this becomes a 
 		                		//kind of forwards scroll instead
-		                		edgePosition = (int)(fingerUpPage+1)*pageWidth;
+		                		edgePosition = (int)(fingerUpPage+1)*mPageWidth;
 		                	}
 		                	else //carry on as normal
 		                	{
-		                		edgePosition = (int)(fingerUpPage)*pageWidth;
+		                		edgePosition = mCurrentPage*mPageWidth;
 		                	}
 		                }
-	                	
-	                	
-	                	
 	                	
 	                }
 	                else //backwards
 	                {
-	                	if(distanceX < -DEFAULT_SWIPE_THRESHOLD)//go backwards
+	                	if(mDistanceX < -DEFAULT_SWIPE_THRESHOLD)//go backwards
 		                {
-		                	edgePosition = (int)(fingerUpPage)*pageWidth;
+	                		edgePosition = (int)(fingerUpPage)*mPageWidth;
 		                }
 		                else //return to start position
 		                {
@@ -388,46 +537,24 @@ public class SwipeView extends HorizontalScrollView
 		                		//need to correct for when user starts to scroll into 
 		                		//nothing then pulls it back a bit, this becomes a 
 		                		//kind of backwards scroll instead
-		                		edgePosition = (int)(fingerUpPage)*pageWidth;
+		                		edgePosition = (int)(fingerUpPage)*mPageWidth;
 		                	}
 		                	else //carry on as normal
 		                	{
-		                		edgePosition = (int)(fingerUpPage+1)*pageWidth;
+		                		edgePosition = mCurrentPage*mPageWidth;
 		                	}
 		                	
 		                }
-	                	
-	                	
 	                }
 	                
-	                smoothScrollTo((int)edgePosition, 0);
-	                firstMotionEvent = true;
-	                
-	                
-	                //fire OnPageChangedListener, talk to page control
-	                if(mCurrentPage!=(int)(edgePosition/pageWidth) && (int)(edgePosition/pageWidth)<getPageCount()) //if the page at the beginning of this action is not equal to page we are now on, i.e. if the page has changed
-	                {
-	                	//page control
-	                	if(mPageControl!=null)
-	                	{
-	                		mPageControl.setCurrentPage((int)(edgePosition/pageWidth));
-	                	}
-	               
-	                	//page changed listener 
-	                	if(mOnPageChangedListener!=null)
-	                	{
-	                		mOnPageChangedListener.onPageChanged(mCurrentPage, (int)(edgePosition/pageWidth));
-	                	}
-	                }
-	                
-	                mCurrentPage = (int)(edgePosition/pageWidth);
-	                return true;
+	                smoothScrollToPage((int)edgePosition/mPageWidth);
+	                mFirstMotionEvent = true;
+					mMostlyScrollingInX = false;
+					mMostlyScrollingInY = false;
+					
+					return true;
 			}
-			
 			return false;
 		}
-		
 	}
-
-	
 }	
