@@ -16,7 +16,7 @@
 
 /**
  * @author Jason Fry - jasonfry.co.uk
- * @version 1.1
+ * @version 1.1.1
  * 
  */
 
@@ -396,7 +396,6 @@ public class SwipeView extends HorizontalScrollView
 		
 		if(mMostlyScrollingInY)
 		{
-			mMostlyScrollingInY = false; //reset mostlyScrollingInY as we are about to say we no longer wish to receive anymore touch events, and thus won't be able to reset it anywhere else
 			return false;
 		}
 		if(mMostlyScrollingInX)
