@@ -294,7 +294,7 @@ public class SwipeView extends HorizontalScrollView
 	/**
 	 * Return the current width of each page
 	 * 
-	 * @return Returns t¤he width of each page
+	 * @return Returns the width of each page
 	 */
 	public int getPageWidth()
 	{
