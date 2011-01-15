@@ -58,6 +58,9 @@ public class SwipeView extends HorizontalScrollView
 	private View.OnTouchListener mOnTouchListener;
 	private PageControl mPageControl = null;
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public SwipeView(Context context) 
 	{
 		super(context);
@@ -65,6 +68,9 @@ public class SwipeView extends HorizontalScrollView
 		initSwipeView();
 	}
 	
+	/**
+	 * {@inheritDoc}
+	 */
 	public SwipeView(Context context, AttributeSet attrs) 
 	{
 		super(context, attrs);
@@ -72,6 +78,9 @@ public class SwipeView extends HorizontalScrollView
 		initSwipeView();
 	}
 	
+	/**
+	 * {@inheritDoc}
+	 */
 	public SwipeView(Context context, AttributeSet attrs, int defStyle)
 	{
 		super(context, attrs,defStyle);
@@ -99,18 +108,27 @@ public class SwipeView extends HorizontalScrollView
 		super.setOnTouchListener(mSwipeOnTouchListener);
 	}
 	
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public boolean onTrackballEvent(MotionEvent event)
 	{
 		return true;
 	}
 	
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void addView(View child)
 	{
 		this.addView(child,-1);
 	}
 	
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void addView (View child, int index)
 	{
@@ -127,6 +145,9 @@ public class SwipeView extends HorizontalScrollView
 		this.addView(child, index, params);
 	}
 	
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void addView (View child, ViewGroup.LayoutParams params)
 	{
@@ -134,6 +155,9 @@ public class SwipeView extends HorizontalScrollView
 		this.addView (child, -1, params);
 	}
 	
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void addView (View child, int index, ViewGroup.LayoutParams params)
 	{
@@ -142,6 +166,9 @@ public class SwipeView extends HorizontalScrollView
 		mLinearLayout.addView(child, index, params);
 	}
 	
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	protected void onLayout(boolean changed, int l, int t, int r, int b)
 	{
@@ -152,7 +179,10 @@ public class SwipeView extends HorizontalScrollView
 			scrollToPage(mCurrentPage);
 		}
 	}
-		
+	
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void setOnTouchListener(View.OnTouchListener onTouchListener)
 	{
@@ -481,7 +511,7 @@ public class SwipeView extends HorizontalScrollView
 					if(mJustInterceptedAndIgnored)//if the intercept picked it up first, we need to give the horizontalscrollview ontouch an action down to enable it to scroll and follow your finger
 					{
 						mSendingDummyMotionEvent = true;
-						dispatchTouchEvent(MotionEvent.obtain(event.getDownTime(), event.getEventTime(), MotionEvent.ACTION_DOWN, event.getPointerCount(), mMotionStartX, mMotionStartY, event.getPressure(), event.getSize(), event.getMetaState(), event.getXPrecision(), event.getYPrecision(), event.getDeviceId(), event.getEdgeFlags()));
+						dispatchTouchEvent(MotionEvent.obtain(event.getDownTime(), event.getEventTime(), MotionEvent.ACTION_DOWN, mMotionStartX, mMotionStartY, event.getPressure(), event.getSize(), event.getMetaState(), event.getXPrecision(), event.getYPrecision(), event.getDeviceId(), event.getEdgeFlags()));
 						mJustInterceptedAndIgnored = false;
 						
 						return true;
