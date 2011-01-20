@@ -412,12 +412,11 @@ public class SwipeView extends HorizontalScrollView
 		{
 			mMotionStartX = (int) ev.getX();
 			mMotionStartY = (int) ev.getY();
-		}
-		else if(ev.getAction() == MotionEvent.ACTION_UP)
-		{
-			mMostlyScrollingInX = false;
-			mMostlyScrollingInY = false;
-			
+			if(!mJustInterceptedAndIgnored)
+			{
+				mMostlyScrollingInX = false;
+				mMostlyScrollingInY = false;
+			}
 		}
 		else if(ev.getAction()==MotionEvent.ACTION_MOVE)
 		{
