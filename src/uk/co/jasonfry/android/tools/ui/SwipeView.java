@@ -533,7 +533,7 @@ public class SwipeView extends HorizontalScrollView
 		                	}
 		                	else
 		                	{
-		                		edgePosition = (int)(fingerUpPage)*mPageWidth;
+		                		edgePosition = (int)(mCurrentPage)*mPageWidth;
 		                	}
 		                }
 		                else //return to start position
