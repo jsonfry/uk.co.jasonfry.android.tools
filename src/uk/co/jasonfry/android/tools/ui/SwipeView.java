@@ -16,7 +16,7 @@
 
 /**
  * @author Jason Fry - jasonfry.co.uk
- * @version 1.1.3
+ * @version 1.1.4
  * 
  */
 
@@ -478,6 +478,11 @@ public class SwipeView extends HorizontalScrollView
 			{
 				if(mOnTouchListener.onTouch(v, event))
 				{
+					if(event.getAction() == MotionEvent.ACTION_UP) //this comes back if a very quick movement event has happened over a view with an onClick
+					{
+						//need to call the actionUp directly so the view is not left between pages.
+						actionUp(event);
+					}
 					return true;
 				}
 			}
@@ -491,113 +496,128 @@ public class SwipeView extends HorizontalScrollView
 			switch(event.getAction())
 			{
 				case MotionEvent.ACTION_DOWN :
-					mMotionStartX = (int) event.getX();
-					mMotionStartY = (int) event.getY();
-					mFirstMotionEvent = false;
-					return false;
+					return actionDown(event);
 					
 				case MotionEvent.ACTION_MOVE :
-					int newDistance = mMotionStartX - (int) event.getX();
-					int newDirection;
-					
-					if(newDistance<0) //backwards
-					{
-						newDirection =  (mDistanceX+4 <= newDistance) ? 1 : -1;  //the distance +4 is to allow for jitter
-					}
-					else //forwards
-					{
-						newDirection =  (mDistanceX-4 <= newDistance) ? 1 : -1;  //the distance -4 is to allow for jitter
-					}
-					
-					
-					if(newDirection != mPreviousDirection && !mFirstMotionEvent)//changed direction, so reset start point
-					{
-						mMotionStartX = (int) event.getX();
-						mDistanceX = mMotionStartX - (int) event.getX();
-					}
-					else
-					{
-						mDistanceX = newDistance;
-					}
-
-					mPreviousDirection = newDirection; //backwards -1, forwards is 1,
-					
-					if(mJustInterceptedAndIgnored)//if the intercept picked it up first, we need to give the horizontalscrollview ontouch an action down to enable it to scroll and follow your finger
-					{
-						mSendingDummyMotionEvent = true;
-						dispatchTouchEvent(MotionEvent.obtain(event.getDownTime(), event.getEventTime(), MotionEvent.ACTION_DOWN, mMotionStartX, mMotionStartY, event.getPressure(), event.getSize(), event.getMetaState(), event.getXPrecision(), event.getYPrecision(), event.getDeviceId(), event.getEdgeFlags()));
-						mJustInterceptedAndIgnored = false;
-						
-						return true;
-					}
-					return false;
+					return actionMove(event);
 					
 				case MotionEvent.ACTION_UP :
-					float fingerUpPosition = getScrollX();
-	                float numberOfPages = mLinearLayout.getMeasuredWidth() / mPageWidth;
-	                float fingerUpPage = fingerUpPosition/mPageWidth;
-	                float edgePosition = 0;
-	                
-	                if(mPreviousDirection == 1) //forwards
-	                {
-	                	if(mDistanceX > DEFAULT_SWIPE_THRESHOLD)//if over then go forwards
-		                {
-	                		if(mCurrentPage<(numberOfPages-1))//if not at the end of the pages, you don't want to try and advance into nothing!
-		                	{
-		                		edgePosition = (int)(fingerUpPage+1)*mPageWidth;
-		                	}
-		                	else
-		                	{
-		                		edgePosition = (int)(mCurrentPage)*mPageWidth;
-		                	}
-		                }
-		                else //return to start position
-		                {
-		                	if(Math.round(fingerUpPage)==numberOfPages-1)//if at the end
-		                	{
-		                		//need to correct for when user starts to scroll into 
-		                		//nothing then pulls it back a bit, this becomes a 
-		                		//kind of forwards scroll instead
-		                		edgePosition = (int)(fingerUpPage+1)*mPageWidth;
-		                	}
-		                	else //carry on as normal
-		                	{
-		                		edgePosition = mCurrentPage*mPageWidth;
-		                	}
-		                }
-	                	
-	                }
-	                else //backwards
-	                {
-	                	if(mDistanceX < -DEFAULT_SWIPE_THRESHOLD)//go backwards
-		                {
-	                		edgePosition = (int)(fingerUpPage)*mPageWidth;
-		                }
-		                else //return to start position
-		                {
-		                	if(Math.round(fingerUpPage)==0)//if at beginning, correct
-		                	{
-		                		//need to correct for when user starts to scroll into 
-		                		//nothing then pulls it back a bit, this becomes a 
-		                		//kind of backwards scroll instead
-		                		edgePosition = (int)(fingerUpPage)*mPageWidth;
-		                	}
-		                	else //carry on as normal
-		                	{
-		                		edgePosition = mCurrentPage*mPageWidth;
-		                	}
-		                	
-		                }
-	                }
-	                
-	                smoothScrollToPage((int)edgePosition/mPageWidth);
-	                mFirstMotionEvent = true;
-					mMostlyScrollingInX = false;
-					mMostlyScrollingInY = false;
-					
-					return true;
+					return actionUp(event);
 			}
 			return false;
+		}
+		
+		private boolean actionDown(MotionEvent event)
+		{
+			mMotionStartX = (int) event.getX();
+			mMotionStartY = (int) event.getY();
+			mFirstMotionEvent = false;
+			return false;
+		}
+		
+		private boolean actionMove(MotionEvent event)
+		{
+			int newDistance = mMotionStartX - (int) event.getX();
+			int newDirection;
+			
+			if(newDistance<0) //backwards
+			{
+				newDirection =  (mDistanceX+4 <= newDistance) ? 1 : -1;  //the distance +4 is to allow for jitter
+			}
+			else //forwards
+			{
+				newDirection =  (mDistanceX-4 <= newDistance) ? 1 : -1;  //the distance -4 is to allow for jitter
+			}
+			
+			
+			if(newDirection != mPreviousDirection && !mFirstMotionEvent)//changed direction, so reset start point
+			{
+				mMotionStartX = (int) event.getX();
+				mDistanceX = mMotionStartX - (int) event.getX();
+			}
+			else
+			{
+				mDistanceX = newDistance;
+			}
+
+			mPreviousDirection = newDirection; //backwards -1, forwards is 1,
+			
+			if(mJustInterceptedAndIgnored)//if the intercept picked it up first, we need to give the horizontalscrollview ontouch an action down to enable it to scroll and follow your finger
+			{
+				mSendingDummyMotionEvent = true;
+				dispatchTouchEvent(MotionEvent.obtain(event.getDownTime(), event.getEventTime(), MotionEvent.ACTION_DOWN, mMotionStartX, mMotionStartY, event.getPressure(), event.getSize(), event.getMetaState(), event.getXPrecision(), event.getYPrecision(), event.getDeviceId(), event.getEdgeFlags()));
+				mJustInterceptedAndIgnored = false;
+				
+				return true;
+			}
+			return false;
+		}
+		
+		private boolean actionUp(MotionEvent event)
+		{
+			float fingerUpPosition = getScrollX();
+            float numberOfPages = mLinearLayout.getMeasuredWidth() / mPageWidth;
+            float fingerUpPage = fingerUpPosition/mPageWidth;
+            float edgePosition = 0;
+            
+            if(mPreviousDirection == 1) //forwards
+            {
+            	if(mDistanceX > DEFAULT_SWIPE_THRESHOLD)//if over then go forwards
+                {
+            		if(mCurrentPage<(numberOfPages-1))//if not at the end of the pages, you don't want to try and advance into nothing!
+                	{
+                		edgePosition = (int)(fingerUpPage+1)*mPageWidth;
+                	}
+                	else
+                	{
+                		edgePosition = (int)(mCurrentPage)*mPageWidth;
+                	}
+                }
+                else //return to start position
+                {
+                	if(Math.round(fingerUpPage)==numberOfPages-1)//if at the end
+                	{
+                		//need to correct for when user starts to scroll into 
+                		//nothing then pulls it back a bit, this becomes a 
+                		//kind of forwards scroll instead
+                		edgePosition = (int)(fingerUpPage+1)*mPageWidth;
+                	}
+                	else //carry on as normal
+                	{
+                		edgePosition = mCurrentPage*mPageWidth;
+                	}
+                }
+            	
+            }
+            else //backwards
+            {
+            	if(mDistanceX < -DEFAULT_SWIPE_THRESHOLD)//go backwards
+                {
+            		edgePosition = (int)(fingerUpPage)*mPageWidth;
+                }
+                else //return to start position
+                {
+                	if(Math.round(fingerUpPage)==0)//if at beginning, correct
+                	{
+                		//need to correct for when user starts to scroll into 
+                		//nothing then pulls it back a bit, this becomes a 
+                		//kind of backwards scroll instead
+                		edgePosition = (int)(fingerUpPage)*mPageWidth;
+                	}
+                	else //carry on as normal
+                	{
+                		edgePosition = mCurrentPage*mPageWidth;
+                	}
+                	
+                }
+            }
+            
+            smoothScrollToPage((int)edgePosition/mPageWidth);
+            mFirstMotionEvent = true;
+			mMostlyScrollingInX = false;
+			mMostlyScrollingInY = false;
+			
+			return true;
 		}
 	}
 }	
