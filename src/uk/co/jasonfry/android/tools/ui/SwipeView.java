@@ -16,7 +16,7 @@
 
 /**
  * @author Jason Fry - jasonfry.co.uk
- * @version 1.1.1
+ * @version 1.1.3
  * 
  */
 
@@ -24,6 +24,7 @@ package uk.co.jasonfry.android.tools.ui;
 
 import uk.co.jasonfry.android.tools.ui.PageControl.OnPageControlClickListener;
 import android.content.Context;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Display;
@@ -115,6 +116,20 @@ public class SwipeView extends HorizontalScrollView
 	public boolean onTrackballEvent(MotionEvent event)
 	{
 		return true;
+	}
+	
+	@Override
+	protected boolean onRequestFocusInDescendants(int direction, Rect previouslyFocusedRect)
+	{
+		//this will now pass trackball events down to onTrackballEvent
+		return false;
+	}
+
+	@Override
+    public void requestChildFocus(View child, View focused)
+	{
+		//this will now pass trackball events down to onRequestFocusInDescendants
+		requestFocus();
 	}
 	
 	/**
