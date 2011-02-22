@@ -35,7 +35,6 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
@@ -219,15 +218,14 @@ public class PageControl extends LinearLayout
 		mPageCount = pageCount;
 		for(int i=0;i<pageCount;i++)
 		{
-			indicators.add(new ImageView(mContext));
-			indicators.get(i).setLayoutParams(new LayoutParams(mIndicatorSize, mIndicatorSize));
-			indicators.get(i).setBackgroundDrawable(inactiveDrawable);
+			final ImageView imageView = new ImageView(mContext);
+			LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(mIndicatorSize, mIndicatorSize);
+			params.setMargins(mIndicatorSize/2, mIndicatorSize, mIndicatorSize/2, mIndicatorSize);
+			imageView.setLayoutParams(params);
+			imageView.setBackgroundDrawable(inactiveDrawable);
 
-			FrameLayout f = new FrameLayout(mContext);
-			f.setPadding(mIndicatorSize/2, mIndicatorSize, mIndicatorSize/2, mIndicatorSize);
-			f.addView(indicators.get(i));
-			
-			addView(f);
+			indicators.add(imageView);
+			addView(imageView);
 		}
 	}
 	
