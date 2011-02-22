@@ -45,11 +45,11 @@ public class SwipeView extends HorizontalScrollView
 	private int SCREEN_WIDTH;
 	private int mMotionStartX;
 	private int mMotionStartY;
-	private boolean mFirstOnLayoutCall = true;
 	private boolean mMostlyScrollingInX = false;
 	private boolean mMostlyScrollingInY = false;
 	private boolean mJustInterceptedAndIgnored = false;
 	private boolean mSendingDummyMotionEvent = false;
+	private boolean mCallScrollToPageInOnLayout = false;
 	private int mDistanceX;
 	private int mPreviousDirection;
 	private int mCurrentPage = 0;
@@ -186,23 +186,13 @@ public class SwipeView extends HorizontalScrollView
 	 * {@inheritDoc}
 	 */
 	@Override
-	protected void onAttachedToWindow()
-	{
-		super.onAttachedToWindow();
-		mFirstOnLayoutCall = true;
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
 	protected void onLayout(boolean changed, int l, int t, int r, int b)
 	{
 		super.onLayout(changed, l, t, r, b);
-		if(mFirstOnLayoutCall)
+		if(mCallScrollToPageInOnLayout)
 		{
 			scrollToPage(mCurrentPage);
-			mFirstOnLayoutCall = false;
+			mCallScrollToPageInOnLayout = false;
 		}
 	}
 	
@@ -317,6 +307,8 @@ public class SwipeView extends HorizontalScrollView
 		{
 			mPageControl.setCurrentPage(page);
 		}
+		
+		mCallScrollToPageInOnLayout=!mCallScrollToPageInOnLayout;
 	}
 	
 	/**
