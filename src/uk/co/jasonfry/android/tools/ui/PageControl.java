@@ -16,7 +16,7 @@
 
 /**
  * @author Jason Fry - jasonfry.co.uk
- * @version 1.0
+ * @version 1.0.1
  * 
  */
 
