@@ -617,6 +617,7 @@ public class SwipeView extends HorizontalScrollView
             
             smoothScrollToPage((int)edgePosition/mPageWidth);
             mFirstMotionEvent = true;
+			mDistanceX = 0;
 			mMostlyScrollingInX = false;
 			mMostlyScrollingInY = false;
 			
