@@ -16,7 +16,7 @@
 
 /**
  * @author Jason Fry - jasonfry.co.uk
- * @version 1.1.6
+ * @version 1.1.8
  * 
  */
 
@@ -48,13 +48,9 @@ public class SwipeView extends HorizontalScrollView
 	private boolean mMostlyScrollingInX = false;
 	private boolean mMostlyScrollingInY = false;
 	private boolean mJustInterceptedAndIgnored = false;
-	private boolean mSendingDummyMotionEvent = false;
-	private boolean mCallScrollToPageInOnLayout = false;
-	private int mDistanceX;
-	private int mPreviousDirection;
+	protected boolean mCallScrollToPageInOnLayout = false;
 	private int mCurrentPage = 0;
 	private int mPageWidth = 0;
-	private boolean mFirstMotionEvent = true;
 	private OnPageChangedListener mOnPageChangedListener = null;
 	private SwipeOnTouchListener mSwipeOnTouchListener;
 	private View.OnTouchListener mOnTouchListener;
@@ -474,7 +470,11 @@ public class SwipeView extends HorizontalScrollView
 	
 	private class SwipeOnTouchListener implements View.OnTouchListener
 	{
-
+		private boolean mSendingDummyMotionEvent = false;
+		private int mDistanceX;
+		private int mPreviousDirection;
+		private boolean mFirstMotionEvent = true;
+		
 		public boolean onTouch(View v, MotionEvent event) 
 		{
 			if(mOnTouchListener!=null && !mJustInterceptedAndIgnored || mOnTouchListener!=null && mSendingDummyMotionEvent) //send on touch event to onTouchListener set by an application implementing a SwipeView and setting their own onTouchListener
