@@ -13,9 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
- 
- 
-For SwipeView & PageControl see http://jasonfry.co.uk/?id=23
 
-For GingerbreadOverScrollDisabler see http://jasonfry.co.uk/?id=30
+/**
+ * @author Jason Fry - jasonfry.co.uk
+ * @version 1.0
+ * 
+ */
+
+package uk.co.jasonfry.android.tools.util;
+
+import android.view.View;
+
+public class GingerbreadOverScrollDisabler
+{
+	public static void disableOverScroll(View view)
+	{
+		view.setOverScrollMode(View.OVER_SCROLL_NEVER);
+	}
+}
