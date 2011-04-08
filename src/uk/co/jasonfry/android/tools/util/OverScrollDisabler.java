@@ -24,7 +24,7 @@ package uk.co.jasonfry.android.tools.util;
 
 import android.view.View;
 
-public class GingerbreadOverScrollDisabler
+public class OverScrollDisabler
 {
 	public static void disableOverScroll(View view)
 	{
