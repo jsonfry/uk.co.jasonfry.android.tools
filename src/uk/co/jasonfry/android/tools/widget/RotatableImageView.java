@@ -22,6 +22,18 @@ public class RotatableImageView extends ImageView
 		super(context, attrs);
 	}
 	
+	public void setRotation(int rotation)
+	{
+		setRotation(rotation, 0.5f, 0.5f);
+	}
+	
+	/**
+	 * Set the image rotation
+	 * 
+	 * @param rotation The amount to rotate (in degrees)
+	 * @param xPivot The x pivot point (range 0-1)
+	 * @param yPivot The x pivot point (range 0-1)
+	 */
 	public void setRotation(int rotation, float xPivot, float yPivot)
 	{
 		mRotation = rotation;
