@@ -2,7 +2,9 @@ package uk.co.jasonfry.android.tools.util;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import android.content.ContentResolver;
 import android.database.Cursor;
@@ -114,7 +116,7 @@ public final class BitmapUtil
 					}
 				}
 			}
-			catch(java.io.IOException e){}
+			catch(IOException e){}
 			
 			Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(contentResolver, id, MediaStore.Images.Thumbnails.MINI_KIND, null);
 			
@@ -130,6 +132,54 @@ public final class BitmapUtil
 		else
 		{
 			return null;
+		}
+	}
+	
+	public static void createScaledImage(String sourceFile, String destinationFile, int desiredWidth, int desiredHeight)
+	{
+		BitmapFactory.Options options = new BitmapFactory.Options();
+		options.inJustDecodeBounds = true;
+		BitmapFactory.decodeFile(sourceFile, options);
+
+		int srcWidth = options.outWidth;
+		int srcHeight = options.outHeight;
+
+		if(desiredWidth > srcWidth)
+		{
+			desiredWidth = srcWidth;
+		}
+
+		int inSampleSize = 1;
+		while(srcWidth / 2 > desiredWidth)
+		{
+		    srcWidth /= 2;
+		    srcHeight /= 2;
+		    inSampleSize *= 2;
+		}
+
+		float desiredScale = (float) desiredWidth / srcWidth;
+
+		options.inJustDecodeBounds = false;
+		options.inDither = false;
+		options.inSampleSize = inSampleSize;
+		options.inScaled = false;
+		options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+		Bitmap sampledSrcBitmap = BitmapFactory.decodeFile(sourceFile, options);
+
+		Matrix matrix = new Matrix();
+		matrix.postScale(desiredScale, desiredScale);
+		Bitmap scaledBitmap = Bitmap.createBitmap(sampledSrcBitmap, 0, 0, sampledSrcBitmap.getWidth(), sampledSrcBitmap.getHeight(), matrix, true);
+		sampledSrcBitmap = null;
+
+		try
+		{
+			FileOutputStream out = new FileOutputStream(destinationFile);
+			scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, out);
+			scaledBitmap = null;
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
 		}
 	}
 }
