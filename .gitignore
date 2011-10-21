@@ -2,3 +2,5 @@ bin/*
 gen/*
 .DS_Store
 .project
+default.properties
+local.properties
