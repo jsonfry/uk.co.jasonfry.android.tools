@@ -196,7 +196,6 @@ public class PageView extends BounceSwipeView
 				loadPage(page,1,null);
 				loadPage(page+1,2,null);
 			}
-			resetMargins();
 		}
 	}
 	
@@ -395,7 +394,6 @@ public class PageView extends BounceSwipeView
 		View convertView = getChildContainer().getChildAt(0);
 		getChildContainer().removeViewAt(0);
 		loadPage(frontPageToLoad,2,convertView);
-		resetMargins();
 	}
 	
 	private void backwardsRearrange(int backPageToLoad)
@@ -403,22 +401,6 @@ public class PageView extends BounceSwipeView
 		View convertView = getChildContainer().getChildAt(2);
 		getChildContainer().removeViewAt(2);
 		loadPage(backPageToLoad,0,convertView);
-		resetMargins();
-	}
-	
-	private void resetMargins()
-	{
-		if(mOffset >0)
-		{
-			((LinearLayout.LayoutParams)getChildContainer().getChildAt(0).getLayoutParams()).leftMargin = mOffset;
-			((LinearLayout.LayoutParams)getChildContainer().getChildAt(0).getLayoutParams()).rightMargin = 0;
-			
-			((LinearLayout.LayoutParams)getChildContainer().getChildAt(1).getLayoutParams()).leftMargin = 0;
-			((LinearLayout.LayoutParams)getChildContainer().getChildAt(1).getLayoutParams()).rightMargin = 0;
-			
-			((LinearLayout.LayoutParams)getChildContainer().getChildAt(2).getLayoutParams()).leftMargin = 0;
-			((LinearLayout.LayoutParams)getChildContainer().getChildAt(2).getLayoutParams()).rightMargin = mOffset;
-		}
 	}
 	
 	public void itemAddedToAdapter(int position)
