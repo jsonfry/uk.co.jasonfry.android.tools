@@ -13,6 +13,11 @@ import uk.co.jasonfry.android.tools.util.AnimationUtil;
 
 public class BounceScrollView extends ScrollView {
 
+	public static final int BOUNCE_MODE_ENABLED = 0;
+	public static final int BOUNCE_MODE_DISABLED = 1;
+	public static final int BOUNCE_MODE_TOP = 2;
+	public static final int BOUNCE_MODE_BOTTOM = 3;
+	
 	private static final int ANIMATION_DURATION = 120;
 	private static final int FRAME_DURATION = 30;
 	private static final int NUMBER_OF_FRAMES = ANIMATION_DURATION/FRAME_DURATION;
@@ -32,10 +37,11 @@ public class BounceScrollView extends ScrollView {
 	private int mCurrentAnimationFrame;
 	private int mPaddingChange;
 	private boolean mBouncingSide;
-	private SharedPreferences mSharedPreferences;
 	private Context mContext;
-	private boolean mBounceEnabled = true;
-	private int mTopOffset = 0; //use this to hide bits at the top
+	private boolean mBouncingTopEnabled = true;
+	private boolean mBouncingBottomEnabled = true;
+	private boolean mBouncing = false;
+	
 	
 	public BounceScrollView(Context context) {
 		super(context);
@@ -58,7 +64,6 @@ public class BounceScrollView extends ScrollView {
 	private void initBounceScrollView() {
 		setOverScrollMode(View.OVER_SCROLL_NEVER);
 		super.setOnTouchListener(new BounceViewOnTouchListener());
-		mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
 		
 		mEaseAnimationFrameHandler = new Handler() {
 			public void handleMessage(Message msg) {
@@ -91,11 +96,48 @@ public class BounceScrollView extends ScrollView {
 	}
 	
 	public void setBounceEnabled(boolean enabled) {
-		mBounceEnabled = enabled;
+		if(enabled) {
+    		setBounceMode(BOUNCE_MODE_ENABLED);
+		} else {
+    		setBounceMode(BOUNCE_MODE_DISABLED);
+		}
 	}
 	
 	public boolean getBounceEnabled() {
-		return mBounceEnabled;
+		return mBouncingTopEnabled || mBouncingBottomEnabled;
+	}
+	
+	public void setBounceMode(int bounceMode) {
+    	switch(bounceMode) {
+        	case BOUNCE_MODE_ENABLED :
+        	    mBouncingTopEnabled = true;
+        	    mBouncingBottomEnabled = true;
+        	    break;
+            case BOUNCE_MODE_DISABLED :
+                mBouncingTopEnabled = false;
+                mBouncingBottomEnabled = false;
+                break;
+            case BOUNCE_MODE_TOP :
+                mBouncingTopEnabled = true;
+                mBouncingBottomEnabled = false;
+                break;
+            case BOUNCE_MODE_BOTTOM :
+                mBouncingTopEnabled = false;
+                mBouncingBottomEnabled = true;
+                break;
+    	}
+	}
+	
+	public int getBounceMode() {
+    	if(mBouncingTopEnabled && mBouncingBottomEnabled) {
+        	return BOUNCE_MODE_ENABLED;
+    	} else if(mBouncingTopEnabled) {
+        	return BOUNCE_MODE_TOP;
+    	} else if(mBouncingBottomEnabled) {
+        	return BOUNCE_MODE_BOTTOM;
+    	} else {
+        	return BOUNCE_MODE_DISABLED;
+    	}
 	}
 	
 	private class BounceViewOnTouchListener implements View.OnTouchListener {
@@ -104,7 +146,7 @@ public class BounceScrollView extends ScrollView {
 				return true;
 			}
 			
-			if(mBounceEnabled) {
+			if(mBouncingTopEnabled || mBouncingBottomEnabled) {
 				switch(ev.getAction()) {
 					case MotionEvent.ACTION_MOVE :
 						int maxScrollAmount = getChildAt(getChildCount()-1).getBottom()-getHeight();
@@ -113,15 +155,17 @@ public class BounceScrollView extends ScrollView {
 							mAtEdge = true;
 							mAtEdgeStartPosition = ev.getY();
 							mAtEdgePreviousPosition = ev.getY();
-						} else if(getScrollY()==0 && ev.getY() > mAtEdgeStartPosition) {
+						} else if(mBouncingTopEnabled && getScrollY()==0 && ev.getY() > mAtEdgeStartPosition) {
 						    mAtEdgePreviousPosition = ev.getY();
 							mBouncingSide=BOUNCING_ON_TOP;
+                            mBouncing = true;
 							BounceScrollView.super.setPadding(getPaddingLeft(), (int) (mAtEdgePreviousPosition-mAtEdgeStartPosition)/FRICTION, getPaddingRight(), getPaddingBottom());
 							return true;
-						} else if(getScrollY()>=maxScrollAmount) {
+						} else if(mBouncingBottomEnabled && getScrollY()>=maxScrollAmount) {
 						    mAtEdgePreviousPosition = ev.getY(); 
 							mBouncingSide=BOUNCING_ON_BOTTOM;
-
+                            mBouncing = true;
+                            
 							int newBottomPadding = (int) (mAtEdgeStartPosition-mAtEdgePreviousPosition)/FRICTION;
 							if(newBottomPadding>=mPaddingBottom) {
 								BounceScrollView.super.setPadding(getPaddingLeft(), getPaddingTop(), getPaddingRight(), newBottomPadding);
@@ -141,7 +185,10 @@ public class BounceScrollView extends ScrollView {
 							mAtEdge = false;
 							mAtEdgePreviousPosition = 0;
 							mAtEdgeStartPosition = 0;
-							doBounceBackEaseAnimation();
+							if(mBouncing) {
+    							doBounceBackEaseAnimation();
+    							mBouncing = false;
+							}
 							return true;
 						}
 						break;
