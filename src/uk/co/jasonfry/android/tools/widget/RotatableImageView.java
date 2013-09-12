@@ -41,7 +41,7 @@ public class RotatableImageView extends ImageView
 		mYPivot = yPivot;
 	}
 	
-	public int getRotation()
+	public float getRotation()
 	{
 		return mRotation;
 	}
@@ -64,5 +64,4 @@ public class RotatableImageView extends ImageView
 		super.onDraw(canvas);
 	    canvas.restore();
 	}
-
 }
