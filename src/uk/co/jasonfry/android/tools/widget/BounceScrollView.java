@@ -24,8 +24,8 @@ public class BounceScrollView extends ScrollView {
 	private static final int NUMBER_OF_FRAMES = ANIMATION_DURATION/FRAME_DURATION;
 	private static final int DEFAULT_FRICTION = 3;
 	
-	private static final boolean BOUNCING_ON_TOP = true;
-	private static final boolean BOUNCING_ON_BOTTOM = false;
+	public static final boolean BOUNCING_ON_TOP = true;
+	public static final boolean BOUNCING_ON_BOTTOM = false;
 	
 	private boolean mAtEdge = false;
 	private float mAtEdgeStartPosition;
@@ -40,7 +40,7 @@ public class BounceScrollView extends ScrollView {
 	private Handler mEaseAnimationFrameHandler;
 	private int mCurrentAnimationFrame;
 	private int mPaddingChange;
-	private boolean mBouncingSide;
+	private boolean mLastBouncingSide;
 	private Context mContext;
 	private boolean mBouncingTopEnabled = true;
 	private boolean mBouncingBottomEnabled = true;
@@ -74,14 +74,14 @@ public class BounceScrollView extends ScrollView {
 			public void handleMessage(Message msg) {
 				float newPadding = AnimationUtil.quadraticOutEase(mCurrentAnimationFrame, mPaddingStartValue, -mPaddingChange, NUMBER_OF_FRAMES);
 				
-				if (mBouncingSide == BOUNCING_ON_TOP) {
+				if (mLastBouncingSide == BOUNCING_ON_TOP) {
 					if(!api11OrLater()) {
 					    BounceScrollView.super.setPadding(getPaddingLeft(), (int) newPadding, getPaddingRight(), mPaddingBottom- (int) newPadding);
 					} else {
     					BounceScrollView.super.setTranslationY(newPadding);
 					}
 					onBounceTop(getCurrentTopBounceAmount(), false);
-				} else if (mBouncingSide == BOUNCING_ON_BOTTOM) {
+				} else if (mLastBouncingSide == BOUNCING_ON_BOTTOM) {
 					if(!api11OrLater()) {
 					    BounceScrollView.super.setPadding(getPaddingLeft(), mPaddingTop- (int) newPadding, getPaddingRight(), (int) newPadding);
                     } else {
@@ -119,6 +119,7 @@ public class BounceScrollView extends ScrollView {
         	mTranslationTop = 0;
         	mTranslationBottom = 0;
     	}
+    	super.setTranslationY(translation);
 	}
 	
 	public void setBounceListener(BounceListener bounceListener) {
@@ -224,39 +225,38 @@ public class BounceScrollView extends ScrollView {
 							mAtEdgePreviousPosition = ev.getRawY();
 						} else if(mBouncingTopEnabled && getScrollY()==0 && ev.getRawY() > mAtEdgeStartPosition) {
 						    mAtEdgePreviousPosition = ev.getRawY();
-							mBouncingSide=BOUNCING_ON_TOP;
+							mLastBouncingSide=BOUNCING_ON_TOP;
                             mBouncing = true;
                             
                             float newTopPadding = (mAtEdgePreviousPosition-mAtEdgeStartPosition)/mFriction;
                             if(!api11OrLater()) {
-							    BounceScrollView.super.setPadding(getPaddingLeft(), (int) newTopPadding, getPaddingRight(), mPaddingBottom- (int) newTopPadding);
+							    BounceScrollView.super.setPadding(getPaddingLeft(), (int) newTopPadding+mPaddingTop, getPaddingRight(), mPaddingBottom- (int) newTopPadding);
                             } else {
-    							BounceScrollView.super.setTranslationY(newTopPadding);
+    							BounceScrollView.super.setTranslationY(newTopPadding+mTranslationTop);
 							}
 							onBounceTop(getCurrentTopBounceAmount(), true);
 							return true;
 						} else if(mBouncingBottomEnabled && getScrollY()>=maxScrollAmount) {
 						    mAtEdgePreviousPosition = ev.getRawY(); 
-							mBouncingSide=BOUNCING_ON_BOTTOM;
+							mLastBouncingSide=BOUNCING_ON_BOTTOM;
                             mBouncing = true;
                             
 							float newBottomPadding = (mAtEdgeStartPosition-mAtEdgePreviousPosition)/mFriction;
 							
 							if(!api11OrLater()) {
     							if(newBottomPadding>=mPaddingBottom) {
-    								BounceScrollView.super.setPadding(getPaddingLeft(), mPaddingTop- (int) newBottomPadding, getPaddingRight(), (int) newBottomPadding);
+    								BounceScrollView.super.setPadding(getPaddingLeft(), mPaddingTop - (int) newBottomPadding, getPaddingRight(), (int) (newBottomPadding+mTranslationBottom));
     							} else {
-    								BounceScrollView.super.setPadding(getPaddingLeft(), mPaddingTop- (int) mPaddingBottom, getPaddingRight(), (int) mPaddingBottom);
+    								BounceScrollView.super.setPadding(getPaddingLeft(), mPaddingTop, getPaddingRight(), (int) mPaddingBottom);
     							}
-    							scrollTo(getScrollX(), (int) (maxScrollAmount+(mAtEdgeStartPosition-mAtEdgePreviousPosition)/mFriction));
                             } else {
     							if(newBottomPadding>=mTranslationBottom) {
-    								BounceScrollView.super.setTranslationY(-newBottomPadding);
+    								BounceScrollView.super.setTranslationY((-newBottomPadding-mTranslationBottom)+mTranslationTop);
     							} else {
-    								BounceScrollView.super.setTranslationY(mTranslationBottom);
+    								BounceScrollView.super.setTranslationY(-mTranslationBottom+mTranslationTop);
     							}
-    							scrollTo(getScrollX(), (int) (maxScrollAmount+(mAtEdgeStartPosition-mAtEdgePreviousPosition)/mFriction));
 							}
+							scrollTo(getScrollX(), (int) (maxScrollAmount+(mAtEdgeStartPosition-mAtEdgePreviousPosition)/mFriction));
 							
 							onBounceBottom(getCurrentBottomBounceAmount(), true);
 							return true;
@@ -272,9 +272,9 @@ public class BounceScrollView extends ScrollView {
 							mAtEdgePreviousPosition = 0;
 							mAtEdgeStartPosition = 0;
 							if(mBouncing) {
-    							doBounceBackEaseAnimation();
+							    onTouchBounceFinish();
+    							doBackAnimation();
     							mBouncing = false;
-    							onTouchBounceFinish();
 							}
 							return true;
 						}
@@ -284,28 +284,36 @@ public class BounceScrollView extends ScrollView {
 			return false;
 		}
 	}
-	
-	private void doBounceBackEaseAnimation() {
-		if(mBouncingSide == BOUNCING_ON_TOP) {
+		
+	private void doBackAnimation() {
+    	int paddingStartValue = 0;
+    	int paddingChangeValue = 0;
+    	
+    	if(mLastBouncingSide == BOUNCING_ON_TOP) {
 			if(!api11OrLater()) {
-                mPaddingChange = getPaddingTop() - mPaddingTop;
-                mPaddingStartValue = getPaddingTop();
+                paddingStartValue = getPaddingTop();
             } else {
-                mPaddingChange = (int) (getTranslationY() - mTranslationTop);
-                mPaddingStartValue = (int) getTranslationY();
+                paddingChangeValue = (int) (getTranslationY() - mTranslationTop);
+                paddingStartValue = (int) getTranslationY();
             }
-		} else if(mBouncingSide == BOUNCING_ON_BOTTOM) {
+		} else if(mLastBouncingSide == BOUNCING_ON_BOTTOM) {
 			if(!api11OrLater()) {
-                mPaddingChange = getPaddingBottom() - mPaddingBottom;
-                mPaddingStartValue = getPaddingBottom();
+                paddingChangeValue = getPaddingBottom() - mPaddingBottom;
+                paddingStartValue = getPaddingBottom();
             } else {
-                mPaddingChange = (int) (-getTranslationY() - mTranslationBottom);
-                mPaddingStartValue = (int) -getTranslationY();
+                paddingChangeValue = (int) (-getTranslationY() - mTranslationBottom + mTranslationTop);
+                paddingStartValue = (int) -getTranslationY();
             }
 		}
-		
-		mCurrentAnimationFrame = 0;
-		
+		animateBack(paddingStartValue, paddingChangeValue, mLastBouncingSide);
+	}
+	
+	protected void animateBack(int start, int change, boolean lastBouncingSide) {
+    	mPaddingStartValue = start;
+    	mPaddingChange = change;
+    	mLastBouncingSide = lastBouncingSide;
+    	
+    	mCurrentAnimationFrame = 0;
 		mEaseAnimationFrameHandler.removeMessages(0);
 		mEaseAnimationFrameHandler.sendEmptyMessage(0);
 	}
