@@ -267,22 +267,29 @@ public class BounceScrollView extends ScrollView {
 						break;
 
 					case MotionEvent.ACTION_UP : 
-						if(mAtEdge) {
-							mAtEdge = false;
-							mAtEdgePreviousPosition = 0;
-							mAtEdgeStartPosition = 0;
-							if(mBouncing) {
-							    onTouchBounceFinish();
-    							doBackAnimation();
-    							mBouncing = false;
-							}
-							return true;
-						}
-						break;
+						return doTouchFinished();
+
+					case MotionEvent.ACTION_CANCEL :
+						return doTouchFinished();
 				}
 			}
 			return false;
 		}
+	}
+
+	private boolean doTouchFinished() {
+		if(mAtEdge) {
+			mAtEdge = false;
+			mAtEdgePreviousPosition = 0;
+			mAtEdgeStartPosition = 0;
+			if(mBouncing) {
+			    onTouchBounceFinish();
+				doBackAnimation();
+				mBouncing = false;
+			}
+			return true;
+		}
+		return false;
 	}
 		
 	private void doBackAnimation() {
