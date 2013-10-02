@@ -4,3 +4,4 @@ gen/*
 .project
 default.properties
 local.properties
+.classpath
