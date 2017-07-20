@@ -216,6 +216,7 @@ public class PageControl extends LinearLayout
 	public void setPageCount(int pageCount)
 	{
 		mPageCount = pageCount;
+		indicators.clear();
 		for(int i=0;i<pageCount;i++)
 		{
 			final ImageView imageView = new ImageView(mContext);
